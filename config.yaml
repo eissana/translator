@@ -1,0 +1,19 @@
+load_model: True
+save_model: False
+model_filename: models/model.pt
+
+example_text: Zwei junge weiße Männer sind im Freien in der Nähe vieler Büsche.
+
+preprocessor:
+  data_root: data
+  spacy_names:
+    - de_core_news_sm
+    - en_core_web_sm
+  exts:
+    - .de
+    - .en
+  min_freq: 2
+  max_size: 10000
+
+data:
+  batch_size: 16
