@@ -5,75 +5,7 @@ import numpy as np
 
 from preprocess import Preprocessor
 import util
-
-
-class Transformer(nn.Module):
-    def __init__(
-        self,
-        src_vocab_size,
-        tgt_vocab_size,
-        num_encoder_layers,
-        num_decoder_layers,
-        src_pad_idx,
-        tgt_pad_idx,
-        block_size,
-        device,
-        embedding_dim,
-        nhead,
-        dim_feedforward,
-        dropout,
-    ):
-        super().__init__()
-        self.device = device
-        self.src_pad_idx = src_pad_idx
-        self.tgt_pad_idx = tgt_pad_idx
-
-        self.src_emb = nn.Embedding(src_vocab_size, embedding_dim)
-        self.src_pos = nn.Embedding(block_size, embedding_dim)
-
-        self.tgt_emb = nn.Embedding(tgt_vocab_size, embedding_dim)
-        self.tgt_pos = nn.Embedding(block_size, embedding_dim)
-
-        self.transformer = nn.Transformer(
-            d_model=embedding_dim,
-            nhead=nhead,
-            num_encoder_layers=num_encoder_layers,
-            num_decoder_layers=num_decoder_layers,
-            dim_feedforward=dim_feedforward,
-            dropout=dropout,
-            batch_first=True,
-        )
-
-        self.proj = nn.Linear(embedding_dim, tgt_vocab_size)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, src, tgt):
-        _, srcT = src.shape
-        src_positions = torch.arange(srcT).unsqueeze(0).to(self.device)
-        src_out = self.src_emb(src) + self.src_pos(src_positions)
-        src_out = self.dropout(src_out)
-
-        _, tgtT = tgt.shape
-        tgt_positions = torch.arange(tgtT).unsqueeze(0).to(self.device)
-        tgt_out = self.tgt_emb(tgt) + self.tgt_pos(tgt_positions)
-        tgt_out = self.dropout(tgt_out)
-
-        # Avoiding unnecessary computation on padded text
-        src_key_padding_mask = src == self.src_pad_idx
-        tgt_key_padding_mask = tgt == self.tgt_pad_idx
-
-        tgt_mask = nn.Transformer.generate_square_subsequent_mask(tgtT).to(self.device)
-        out = self.transformer(
-            src=src_out,
-            tgt=tgt_out,
-            src_key_padding_mask=src_key_padding_mask,
-            tgt_key_padding_mask=tgt_key_padding_mask,
-            tgt_mask=tgt_mask,
-        )
-
-        out = self.proj(out)
-
-        return out
+from transformer import CustomTransformer
 
 
 def main():
@@ -125,19 +57,26 @@ def main():
         "dim_feedforward": 4,
     }
 
-    model = Transformer(
+    # model = Transformer(
+    #     src_vocab_size=src_vocab_size,
+    #     tgt_vocab_size=tgt_vocab_size,
+    #     num_encoder_layers=params["num_encoder_layers"],
+    #     num_decoder_layers=params["num_decoder_layers"],
+    #     src_pad_idx=src_pad_idx,
+    #     tgt_pad_idx=tgt_pad_idx,
+    #     block_size=params["block_size"],
+    #     device=device,
+    #     embedding_dim=params["embedding_dim"],
+    #     nhead=params["nhead"],
+    #     dim_feedforward=params["dim_feedforward"],
+    #     dropout=params["dropout"],
+    # ).to(device)
+
+    model = CustomTransformer(
         src_vocab_size=src_vocab_size,
         tgt_vocab_size=tgt_vocab_size,
-        num_encoder_layers=params["num_encoder_layers"],
-        num_decoder_layers=params["num_decoder_layers"],
-        src_pad_idx=src_pad_idx,
-        tgt_pad_idx=tgt_pad_idx,
-        block_size=params["block_size"],
         device=device,
-        embedding_dim=params["embedding_dim"],
-        nhead=params["nhead"],
-        dim_feedforward=params["dim_feedforward"],
-        dropout=params["dropout"],
+        params=params,
     ).to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=params["learning_rate"])
